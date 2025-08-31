@@ -14,6 +14,7 @@ public class TransactionTests
 
         // Act
         var transaction = new Transaction(cardNumber, amount, timestamp);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Assert
         transaction.CardNumber.Should().Be(cardNumber);
@@ -56,6 +57,7 @@ public class TransactionTests
 
         // Act
         var transaction = new Transaction(cardNumber, amount, timestamp);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Assert
         transaction.IsValid.Should().BeFalse();
@@ -73,6 +75,7 @@ public class TransactionTests
 
         // Act
         var transaction = new Transaction(cardNumber, amount, timestamp);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Assert
         transaction.IsValid.Should().BeFalse();
@@ -100,6 +103,7 @@ public class TransactionTests
     {
         // Arrange
         var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        transaction.ValidateCard(false); // Explicitly validate
         var originalUpdatedAt = transaction.UpdatedAt;
 
         // Act
@@ -119,6 +123,7 @@ public class TransactionTests
     {
         // Act
         var transaction = new Transaction(cardNumber, 100.50m, DateTime.UtcNow);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Assert
         transaction.CardType.Should().Be(expectedType);

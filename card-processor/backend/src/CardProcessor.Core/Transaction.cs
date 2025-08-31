@@ -40,13 +40,15 @@ public class Transaction
         Amount = amount;
         Timestamp = timestamp;
         
-        // Validate card and set properties (default to test data validation)
-        ValidateCard(false);
+        // Set default values - validation will be handled by the processor service
+        IsValid = false; // Will be set during actual validation
+        CardType = CardType.Unknown; // Will be detected during validation
+        RejectionReason = null;
     }
 
     public void ValidateCard(bool isRealData = false)
     {
-        // log to console for debugging
+        // Add debug logging
         Console.WriteLine($"Validating card: {CardNumber}, Amount: {Amount}, Real Data: {isRealData}");
         
         // Check for non-numeric characters in card number first

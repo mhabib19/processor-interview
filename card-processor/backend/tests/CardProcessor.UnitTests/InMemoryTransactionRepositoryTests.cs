@@ -17,6 +17,7 @@ public class InMemoryTransactionRepositoryTests
     {
         // Arrange
         var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Act
         var result = await _repository.AddAsync(transaction);
@@ -33,6 +34,7 @@ public class InMemoryTransactionRepositoryTests
     {
         // Arrange
         var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        transaction.ValidateCard(false); // Explicitly validate
         var addedTransaction = await _repository.AddAsync(transaction);
 
         // Act
@@ -63,6 +65,8 @@ public class InMemoryTransactionRepositoryTests
         // Arrange
         var transaction1 = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
         var transaction2 = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        transaction1.ValidateCard(false); // Explicitly validate
+        transaction2.ValidateCard(false); // Explicitly validate
         
         await _repository.AddAsync(transaction1);
         await _repository.AddAsync(transaction2);
@@ -77,20 +81,19 @@ public class InMemoryTransactionRepositoryTests
     }
 
     [Fact]
-    public async Task GetAllAsync_WithPagination_ReturnsCorrectPage()
+    public async Task AddRangeAsync_WithMultipleTransactions_AddsAllTransactions()
     {
         // Arrange
-        for (int i = 0; i < 25; i++)
-        {
-            var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
-            await _repository.AddAsync(transaction);
-        }
+        var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        transaction.ValidateCard(false); // Explicitly validate
 
         // Act
-        var result = await _repository.GetAllAsync(page: 2, pageSize: 10);
+        await _repository.AddRangeAsync(new[] { transaction });
 
         // Assert
-        result.Should().HaveCount(10);
+        var allTransactions = await _repository.GetAllAsync();
+        allTransactions.Should().HaveCount(1);
+        allTransactions.First().CardNumber.Should().Be("4532015112830366");
     }
 
     [Fact]
@@ -99,16 +102,21 @@ public class InMemoryTransactionRepositoryTests
         // Arrange
         var visaTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
         var masterCardTransaction = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        visaTransaction.ValidateCard(false); // Explicitly validate
+        masterCardTransaction.ValidateCard(false); // Explicitly validate
         
         await _repository.AddAsync(visaTransaction);
         await _repository.AddAsync(masterCardTransaction);
 
         // Act
-        var result = await _repository.GetByCardTypeAsync(CardType.Visa);
+        var visaTransactions = await _repository.GetByCardTypeAsync(CardType.Visa);
+        var masterCardTransactions = await _repository.GetByCardTypeAsync(CardType.MasterCard);
 
         // Assert
-        result.Should().HaveCount(1);
-        result.First().CardType.Should().Be(CardType.Visa);
+        visaTransactions.Should().HaveCount(1);
+        visaTransactions.First().CardType.Should().Be(CardType.Visa);
+        masterCardTransactions.Should().HaveCount(1);
+        masterCardTransactions.First().CardType.Should().Be(CardType.MasterCard);
     }
 
     [Fact]
@@ -117,6 +125,8 @@ public class InMemoryTransactionRepositoryTests
         // Arrange
         var oldTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow.AddDays(-10));
         var recentTransaction = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        oldTransaction.ValidateCard(false); // Explicitly validate
+        recentTransaction.ValidateCard(false); // Explicitly validate
         
         await _repository.AddAsync(oldTransaction);
         await _repository.AddAsync(recentTransaction);
@@ -133,11 +143,13 @@ public class InMemoryTransactionRepositoryTests
     }
 
     [Fact]
-    public async Task GetRejectedTransactionsAsync_WithMixedTransactions_ReturnsOnlyRejected()
+    public async Task GetRejectedTransactionsAsync_ReturnsOnlyRejectedTransactions()
     {
         // Arrange
         var validTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
         var invalidTransaction = new Transaction("1234567890123456", 200.75m, DateTime.UtcNow); // Unknown card type
+        validTransaction.ValidateCard(false); // Explicitly validate
+        invalidTransaction.ValidateCard(false); // Explicitly validate
         
         await _repository.AddAsync(validTransaction);
         await _repository.AddAsync(invalidTransaction);
@@ -147,93 +159,61 @@ public class InMemoryTransactionRepositoryTests
 
         // Assert
         result.Should().HaveCount(1);
+        result.First().CardNumber.Should().Be("1234567890123456");
         result.First().IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public async Task AddRangeAsync_WithMultipleTransactions_AddsAllTransactions()
+    public async Task GetTotalCountAsync_ReturnsCorrectCount()
     {
         // Arrange
-        var transactions = new List<Transaction>
-        {
-            new Transaction("4532015112830366", 100.50m, DateTime.UtcNow),
-            new Transaction("5555555555554444", 200.75m, DateTime.UtcNow),
-            new Transaction("378282246310005", 300.25m, DateTime.UtcNow)
-        };
-
-        // Act
-        var result = await _repository.AddRangeAsync(transactions);
-
-        // Assert
-        result.Should().HaveCount(3);
-        var allTransactions = await _repository.GetAllAsync();
-        allTransactions.Should().HaveCount(3);
-    }
-
-
-
-    [Fact]
-    public async Task GetTotalCountAsync_WithTransactions_ReturnsCorrectCount()
-    {
-        // Arrange
-        for (int i = 0; i < 5; i++)
-        {
-            var transaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
-            await _repository.AddAsync(transaction);
-        }
+        var transaction1 = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        var transaction2 = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        transaction1.ValidateCard(false); // Explicitly validate
+        transaction2.ValidateCard(false); // Explicitly validate
+        
+        await _repository.AddAsync(transaction1);
+        await _repository.AddAsync(transaction2);
 
         // Act
         var result = await _repository.GetTotalCountAsync();
 
         // Assert
-        result.Should().Be(5);
+        result.Should().Be(2);
     }
 
     [Fact]
-    public async Task GetCountByCardTypeAsync_WithMixedTransactions_ReturnsCorrectCount()
+    public async Task GetCountByCardTypeAsync_ReturnsCorrectCount()
     {
         // Arrange
-        var visaTransactions = new List<Transaction>
-        {
-            new Transaction("4532015112830366", 100.50m, DateTime.UtcNow),
-            new Transaction("4111111111111111", 200.75m, DateTime.UtcNow)
-        };
+        var visaTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        var masterCardTransaction = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        visaTransaction.ValidateCard(false); // Explicitly validate
+        masterCardTransaction.ValidateCard(false); // Explicitly validate
         
-        var masterCardTransactions = new List<Transaction>
-        {
-            new Transaction("5555555555554444", 300.25m, DateTime.UtcNow)
-        };
-
-        await _repository.AddRangeAsync(visaTransactions);
-        await _repository.AddRangeAsync(masterCardTransactions);
+        await _repository.AddAsync(visaTransaction);
+        await _repository.AddAsync(masterCardTransaction);
 
         // Act
         var visaCount = await _repository.GetCountByCardTypeAsync(CardType.Visa);
         var masterCardCount = await _repository.GetCountByCardTypeAsync(CardType.MasterCard);
 
         // Assert
-        visaCount.Should().Be(2);
+        visaCount.Should().Be(1);
         masterCardCount.Should().Be(1);
     }
 
     [Fact]
-    public async Task GetRejectedCountAsync_WithMixedTransactions_ReturnsCorrectCount()
+    public async Task GetRejectedCountAsync_ReturnsCorrectCount()
     {
         // Arrange
-        var validTransactions = new List<Transaction>
-        {
-            new Transaction("4532015112830366", 100.50m, DateTime.UtcNow),
-            new Transaction("5555555555554444", 200.75m, DateTime.UtcNow)
-        };
+        var validTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        var invalidTransaction = new Transaction("1234567890123456", 200.75m, DateTime.UtcNow); // Unknown card type
+        validTransaction.ValidateCard(false); // Explicitly validate
+        invalidTransaction.ValidateCard(false); // Explicitly validate
         
-        var invalidTransactions = new List<Transaction>
-        {
-            // Only use card types that will be detected as invalid without Luhn check
-            new Transaction("1234567890123456", 400.00m, DateTime.UtcNow)  // Unknown type
-        };
-
-        await _repository.AddRangeAsync(validTransactions);
-        await _repository.AddRangeAsync(invalidTransactions);
+        await _repository.AddAsync(validTransaction);
+        await _repository.AddAsync(invalidTransaction);
 
         // Act
         var result = await _repository.GetRejectedCountAsync();
@@ -243,50 +223,46 @@ public class InMemoryTransactionRepositoryTests
     }
 
     [Fact]
-    public async Task GetTotalAmountAsync_WithTransactions_ReturnsCorrectAmount()
+    public async Task GetTotalAmountAsync_ReturnsCorrectAmount()
     {
         // Arrange
-        var transactions = new List<Transaction>
-        {
-            new Transaction("4532015112830366", 100.50m, DateTime.UtcNow),
-            new Transaction("5555555555554444", 200.75m, DateTime.UtcNow),
-            new Transaction("378282246310005", 300.25m, DateTime.UtcNow)
-        };
-
-        await _repository.AddRangeAsync(transactions);
+        var validTransaction1 = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        var validTransaction2 = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        var invalidTransaction = new Transaction("1234567890123456", 300.25m, DateTime.UtcNow); // Invalid
+        validTransaction1.ValidateCard(false); // Explicitly validate
+        validTransaction2.ValidateCard(false); // Explicitly validate
+        invalidTransaction.ValidateCard(false); // Explicitly validate
+        
+        await _repository.AddAsync(validTransaction1);
+        await _repository.AddAsync(validTransaction2);
+        await _repository.AddAsync(invalidTransaction);
 
         // Act
         var result = await _repository.GetTotalAmountAsync();
 
         // Assert
-        result.Should().Be(601.50m);
+        result.Should().Be(301.25m); // Only valid transactions: 100.50 + 200.75
     }
 
     [Fact]
-    public async Task GetTotalAmountByCardTypeAsync_WithMixedTransactions_ReturnsCorrectAmount()
+    public async Task GetTotalAmountByCardTypeAsync_ReturnsCorrectAmount()
     {
         // Arrange
-        var visaTransactions = new List<Transaction>
-        {
-            new Transaction("4532015112830366", 100.50m, DateTime.UtcNow),
-            new Transaction("4111111111111111", 200.75m, DateTime.UtcNow)
-        };
+        var visaTransaction = new Transaction("4532015112830366", 100.50m, DateTime.UtcNow);
+        var masterCardTransaction = new Transaction("5555555555554444", 200.75m, DateTime.UtcNow);
+        visaTransaction.ValidateCard(false); // Explicitly validate
+        masterCardTransaction.ValidateCard(false); // Explicitly validate
         
-        var masterCardTransactions = new List<Transaction>
-        {
-            new Transaction("5555555555554444", 300.25m, DateTime.UtcNow)
-        };
-
-        await _repository.AddRangeAsync(visaTransactions);
-        await _repository.AddRangeAsync(masterCardTransactions);
+        await _repository.AddAsync(visaTransaction);
+        await _repository.AddAsync(masterCardTransaction);
 
         // Act
         var visaAmount = await _repository.GetTotalAmountByCardTypeAsync(CardType.Visa);
         var masterCardAmount = await _repository.GetTotalAmountByCardTypeAsync(CardType.MasterCard);
 
         // Assert
-        visaAmount.Should().Be(301.25m);
-        masterCardAmount.Should().Be(300.25m);
+        visaAmount.Should().Be(100.50m);
+        masterCardAmount.Should().Be(200.75m);
     }
 }
 

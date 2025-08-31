@@ -35,14 +35,15 @@ public class FileParserTests
         var firstTransaction = transactions.First();
         firstTransaction.CardNumber.Should().Be("4532015112830366");
         firstTransaction.Amount.Should().Be(100.50m);
-        firstTransaction.CardType.Should().Be(CardType.Visa);
-        firstTransaction.IsValid.Should().BeTrue();
+        // Note: CardType and IsValid will be Unknown/false since validation happens in processor service
+        firstTransaction.CardType.Should().Be(CardType.Unknown);
+        firstTransaction.IsValid.Should().BeFalse();
 
         var secondTransaction = transactions.Last();
         secondTransaction.CardNumber.Should().Be("5555555555554444");
         secondTransaction.Amount.Should().Be(200.75m);
-        secondTransaction.CardType.Should().Be(CardType.MasterCard);
-        secondTransaction.IsValid.Should().BeTrue();
+        secondTransaction.CardType.Should().Be(CardType.Unknown);
+        secondTransaction.IsValid.Should().BeFalse();
 
         // Cleanup
         File.Delete(filePath);
@@ -78,14 +79,15 @@ public class FileParserTests
         var firstTransaction = transactions.First();
         firstTransaction.CardNumber.Should().Be("4532015112830366");
         firstTransaction.Amount.Should().Be(100.50m);
-        firstTransaction.CardType.Should().Be(CardType.Visa);
-        firstTransaction.IsValid.Should().BeTrue();
+        // Note: CardType and IsValid will be Unknown/false since validation happens in processor service
+        firstTransaction.CardType.Should().Be(CardType.Unknown);
+        firstTransaction.IsValid.Should().BeFalse();
 
         var secondTransaction = transactions.Last();
         secondTransaction.CardNumber.Should().Be("5555555555554444");
         secondTransaction.Amount.Should().Be(200.75m);
-        secondTransaction.CardType.Should().Be(CardType.MasterCard);
-        secondTransaction.IsValid.Should().BeTrue();
+        secondTransaction.CardType.Should().Be(CardType.Unknown);
+        secondTransaction.IsValid.Should().BeFalse();
 
         // Cleanup
         File.Delete(filePath);
@@ -122,14 +124,15 @@ public class FileParserTests
         var firstTransaction = transactions.First();
         firstTransaction.CardNumber.Should().Be("4532015112830366");
         firstTransaction.Amount.Should().Be(100.50m);
-        firstTransaction.CardType.Should().Be(CardType.Visa);
-        firstTransaction.IsValid.Should().BeTrue();
+        // Note: CardType and IsValid will be Unknown/false since validation happens in processor service
+        firstTransaction.CardType.Should().Be(CardType.Unknown);
+        firstTransaction.IsValid.Should().BeFalse();
 
         var secondTransaction = transactions.Last();
         secondTransaction.CardNumber.Should().Be("5555555555554444");
         secondTransaction.Amount.Should().Be(200.75m);
-        secondTransaction.CardType.Should().Be(CardType.MasterCard);
-        secondTransaction.IsValid.Should().BeTrue();
+        secondTransaction.CardType.Should().Be(CardType.Unknown);
+        secondTransaction.IsValid.Should().BeFalse();
 
         // Cleanup
         File.Delete(filePath);
@@ -153,8 +156,9 @@ public class FileParserTests
 
         // Assert
         transactions.Should().HaveCount(2);
+        // Note: All transactions will have IsValid=false and CardType=Unknown since validation happens in processor service
         transactions.Should().OnlyContain(t => !t.IsValid);
-        transactions.All(t => t.RejectionReason == "Unknown card type").Should().BeTrue();
+        transactions.Should().OnlyContain(t => t.CardType == CardType.Unknown);
 
         // Cleanup
         File.Delete(filePath);
@@ -172,7 +176,7 @@ public class FileParserTests
 
         // Act & Assert
         var action = () => parser.ParseFileAsync(filePath);
-        await action.Should().ThrowAsync<Exception>();
+        await action.Should().ThrowAsync<InvalidOperationException>();
 
         // Cleanup
         File.Delete(filePath);
@@ -190,7 +194,7 @@ public class FileParserTests
 
         // Act & Assert
         var action = () => parser.ParseFileAsync(filePath);
-        await action.Should().ThrowAsync<Exception>();
+        await action.Should().ThrowAsync<InvalidOperationException>();
 
         // Cleanup
         File.Delete(filePath);
@@ -282,5 +286,54 @@ public class FileParserTests
         action.Should().Throw<NotSupportedException>();
     }
 
+    [Fact]
+    public async Task CsvFileParser_WithMissingFile_ThrowsException()
+    {
+        // Arrange
+        var nonExistentFilePath = Path.Combine(_testDataPath, "nonexistent.csv");
+        var parser = new CsvFileParser();
+
+        // Act & Assert
+        var action = () => parser.ParseFileAsync(nonExistentFilePath);
+        await action.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task JsonFileParser_WithEmptyFile_ReturnsEmptyList()
+    {
+        // Arrange
+        var filePath = Path.Combine(_testDataPath, "empty.json");
+        await File.WriteAllTextAsync(filePath, "[]");
+        
+        var parser = new JsonFileParser();
+
+        // Act
+        var transactions = await parser.ParseFileAsync(filePath);
+
+        // Assert
+        transactions.Should().BeEmpty();
+
+        // Cleanup
+        File.Delete(filePath);
+    }
+
+    [Fact]
+    public async Task XmlFileParser_WithEmptyFile_ReturnsEmptyList()
+    {
+        // Arrange
+        var filePath = Path.Combine(_testDataPath, "empty.xml");
+        await File.WriteAllTextAsync(filePath, "<transactions></transactions>");
+        
+        var parser = new XmlFileParser();
+
+        // Act
+        var transactions = await parser.ParseFileAsync(filePath);
+
+        // Assert
+        transactions.Should().BeEmpty();
+
+        // Cleanup
+        File.Delete(filePath);
+    }
 
 }
