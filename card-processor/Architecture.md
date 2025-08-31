@@ -67,6 +67,52 @@ The Card Processor is a full-stack application that processes credit card transa
 - **UI Framework**: Tailwind CSS with custom design system
 - **Authentication**: JWT token management with automatic token refresh. Not planning to add user login/auth.
 
+### Data Model
+
+## Transaction Entity
+```csharp
+public class Transaction
+{
+    public Guid Id { get; set; }
+    public string CardNumber { get; set; }
+    public CardType CardType { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime Timestamp { get; set; }
+    public bool IsValid { get; set; }
+    public string? RejectionReason { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+```
+#### Card Types
+```csharp
+public enum CardType
+{
+    Visa,
+    MasterCard,
+    AmericanExpress,
+    Discover,
+    Unknown
+}
+
+```
+### API Endpoints
+```
+GET    /api/token                        # Generate JWT token
+POST   /api/fileupload/upload            # Upload transaction file
+POST   /api/fileupload/process/{fileId}  # Process uploaded file
+GET    /api/fileupload/status/{fileId}   # Get processing status
+GET    /api/fileupload/max-size          # Get configurable file size limit
+GET    /api/transactions                 # Get transactions with filtering
+GET    /api/reports/by-card              # Report by card
+GET    /api/reports/by-card-type         # Report by card type
+GET    /api/reports/by-day               # Report by day
+GET    /api/reports/rejected             # Rejected transactions
+
+** if time permits **
+GET    /api/reports/dashboard            # Dashboard statistics
+```
+
 ## Trade-offs & Decisions
 
 ### Architecture Decisions
@@ -101,5 +147,3 @@ The Card Processor is a full-stack application that processes credit card transa
 1. **Development Environment**: Local development and testing with Docker
 2. more later?
 
-
-***Need to add data model and API endpoints as I continue designing them***
