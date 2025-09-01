@@ -119,7 +119,11 @@ npm test
 
 ### File Size Limits
 
-The application supports configurable file size limits. Check the current limit:
+The application supports configurable file size limits. Configuration files for backend are in CardProcessor.API/appsettings.json.
+
+"MaxFileSizeMB": 25
+
+Check the current limit:
 ```bash
 curl http://localhost:5000/api/fileupload/max-size
 ```
