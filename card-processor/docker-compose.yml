@@ -1,0 +1,32 @@
+
+services:
+  backend:
+    build: ./backend
+    ports: ["5000:5000"]
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - JWT_SECRET_KEY=your-super-secret-key-with-at-least-32-characters-for-jwt-signing
+      - JWT_ISSUER=CardProcessor
+      - JWT_AUDIENCE=CardProcessorAPI
+      - JWT_EXPIRATION_HOURS=24
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    volumes: 
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://backend:5000/api
+      - WDS_SOCKET_PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    depends_on: [backend]
+    
