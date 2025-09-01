@@ -12,7 +12,7 @@ The Card Processor is a full-stack application that processes credit card transa
 - **Reporting**: Generate summaries by card, card type, and day
 - **Web Interface**: React-based UI with Tailwind CSS for data submission (file upload, file size will be configurable) and reporting
 - **API Layer**: RESTful API with simple JWT authentication for transaction processing and reporting
-- **Testing**: Bonus - unit and integration tests
+- **Testing**: included unit and integration tests
 
 ## Architecture Design
 
@@ -84,7 +84,7 @@ public class Transaction
     public DateTime UpdatedAt { get; set; }
 }
 ```
-#### Card Types
+## Card Types
 ```csharp
 public enum CardType
 {
@@ -98,19 +98,106 @@ public enum CardType
 ```
 ### API Endpoints
 ```
-GET    /api/token                        # Generate JWT token
-POST   /api/fileupload/upload            # Upload transaction file
-POST   /api/fileupload/process/{fileId}  # Process uploaded file
-GET    /api/fileupload/status/{fileId}   # Get processing status
-GET    /api/fileupload/max-size          # Get configurable file size limit
-GET    /api/transactions                 # Get transactions with filtering
-GET    /api/reports/by-card              # Report by card
-GET    /api/reports/by-card-type         # Report by card type
-GET    /api/reports/by-day               # Report by day
-GET    /api/reports/rejected             # Rejected transactions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/token` | Generate JWT token |
+| POST | `/api/fileupload/upload` | Upload transaction file |
+| POST | `/api/fileupload/process/{fileId}` | Process uploaded file |
+| GET | `/api/fileupload/status/{fileId}` | Get processing status |
+| DELETE | `/api/fileupload/{fileId}` | Delete uploaded file |
+| GET | `/api/fileupload/max-size` | Get configurable file size limit |
+| GET | `/api/transactions` | Get transactions with filtering |
+| GET | `/api/transactions/{id}` | Get specific transaction by ID |
+| GET | `/api/transactions/rejected` | Get rejected transactions |
+| GET | `/api/report/by-card` | Report by card |
+| GET | `/api/report/by-card-type` | Report by card type (requires cardType parameter) |
+| GET | `/api/report/by-day` | Report by day (requires startDate and endDate parameters) |
+| GET | `/api/report/rejected` | Rejected transactions report |
+| GET | `/api/report/dashboard` | Dashboard statistics (optional dateRange parameter) |
 
-** if time permits **
-GET    /api/reports/dashboard            # Dashboard statistics
+```
+### Authentication
+
+The API uses JWT authentication. Get a token first:
+
+```bash
+curl -X GET http://localhost:5000/api/token
+```
+
+Use the returned token in subsequent requests:
+```bash
+curl -H "Authorization: Bearer <your-token>" http://localhost:5000/api/transactions
+```
+### File Upload Example
+
+```bash
+# Upload a file
+curl -X POST \
+  -H "Authorization: Bearer <your-token>" \
+  -F "file=@transactions.csv" \
+  -F "isRealData=false" \
+  http://localhost:5000/api/fileupload/upload
+
+# Process the uploaded file
+curl -X POST \
+  -H "Authorization: Bearer <your-token>" \
+  http://localhost:5000/api/fileupload/process/{fileId}
+
+# Check processing status
+curl -X GET \
+  -H "Authorization: Bearer <your-token>" \
+  http://localhost:5000/api/fileupload/status/{fileId}
+
+# Delete uploaded file
+curl -X DELETE \
+  -H "Authorization: Bearer <your-token>" \
+  http://localhost:5000/api/fileupload/{fileId}
+
+### Additional API Examples
+
+```bash
+# Get transactions with filtering
+curl -X GET \
+  -H "Authorization: Bearer <your-token>" \
+  "http://localhost:5000/api/transactions?page=1&pageSize=10&cardType=Visa&isValid=true"
+
+# Get report by card type
+curl -X GET \
+  -H "Authorization: Bearer <your-token>" \
+  "http://localhost:5000/api/report/by-card-type?cardType=Visa&page=1&pageSize=20"
+
+# Get report by date range
+curl -X GET \
+  -H "Authorization: Bearer <your-token>" \
+  "http://localhost:5000/api/report/by-day?startDate=2024-01-01&endDate=2024-01-31&page=1&pageSize=20"
+
+# Get dashboard statistics
+curl -X GET \
+  -H "Authorization: Bearer <your-token>" \
+  "http://localhost:5000/api/report/dashboard?dateRange=7d"
+```
+###  Project Structure
+
+```
+card-processor/
+├── backend/
+│   ├── src/
+│   │   ├── CardProcessor.API/          # Web API layer
+│   │   ├── CardProcessor.Application/  # Application services
+│   │   ├── CardProcessor.Core/         # Domain entities
+│   │   └── CardProcessor.Infrastructure/ # Data access
+│   ├── tests/                          # Unit and integration tests
+│   ├── Dockerfile                      # Backend container
+│   └── CardProcessor.sln               # Solution file
+├── frontend/
+│   ├── src/                            # React components
+│   ├── public/                         # Static assets
+│   ├── package.json                    # Dependencies
+│   ├── Dockerfile                      # Frontend container
+│   └── nginx.conf                      # Nginx configuration
+├── docker-compose.yml                  # Multi-container setup
+├── Architecture.md                     # Detailed architecture
+└── README.md                           # how to build and run, and more
 ```
 
 ## Trade-offs & Decisions
@@ -132,7 +219,6 @@ GET    /api/reports/dashboard            # Dashboard statistics
    - **Rationale**: Will be simpler implementation
    - **Trade-off**: Will have limited scalability for large transaciton files
 
-4. more later?
 
 ### Known Limitations
 
@@ -140,10 +226,9 @@ GET    /api/reports/dashboard            # Dashboard statistics
 2. **Memory Constraints**: Limited by available system memory since memory based persistance will be used.
 3. **Basic Authentication**: JWT without advanced security
 4. **File Size**: Limited by configurable memory constraints (default will be 10 MB)
-5. more later?
 
 ### Assumptions
 
 1. **Development Environment**: Local development and testing with Docker
-2. more later?
+
 
